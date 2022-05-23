@@ -94,7 +94,7 @@ def batch_parallel_generate_lnp_hqs_reconstructions(
 
     lnp_filters, lnp_biases = lnp_filter_biases
 
-    n_examples, n_cells, n_bins_observed = example_spikes.shape
+    n_examples, n_cells = example_spikes.shape
     _, height, width = lnp_filters.shape
 
     example_spikes_torch = torch.tensor(example_spikes, dtype=torch.float32, device=device)
@@ -235,7 +235,7 @@ if __name__ == '__main__':
     print("Generating MAP-LNP-dCNN reconstructions")
     target_reconstructions = batch_parallel_generate_lnp_hqs_reconstructions(
         lnp_spikes_binned,
-        (lnp_filters, lnp_biases),
+        (lnp_filters, lnp_biases.squeeze(1)),
         hyperparameters,
         16,
         device,

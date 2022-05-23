@@ -20,6 +20,8 @@ class RenameUnpickler(pickle.Unpickler):
             renamed_module = "data_util.matched_cells_struct"
         elif name == 'FittedGLMFamily' or name == 'FittedGLM' and module == "optimization_encoder.trial_glm":
             renamed_module="reconstruction_alg.glm_inverse_alg"
+        elif name == 'ScaledPoissonFittedParams' and module == 'optimization_encoder.poisson_encoder':
+            renamed_module='encoding_models.poisson_encoder'
 
         return super(RenameUnpickler, self).find_class(renamed_module, name)
 
@@ -92,9 +94,9 @@ def compute_stimulus_onset_spikes(glm_binned_spikes: Union[np.ndarray, torch.Ten
     offset_bin = 400
 
     if isinstance(glm_binned_spikes, np.ndarray):
-        return np.sum(glm_binned_spikes[:, onset_bin:offset_bin], axis=1)
+        return np.sum(glm_binned_spikes[:, :, onset_bin:offset_bin], axis=2)
     else:
-        return torch.sum(glm_binned_spikes[:, onset_bin:offset_bin], dim=1)
+        return torch.sum(glm_binned_spikes[:, :, onset_bin:offset_bin], dim=2)
 
 
 def load_fitted_glm_families() \
@@ -118,7 +120,7 @@ def load_fitted_glm_families() \
 def load_fitted_lnps(ct_order: List[str]) -> Tuple[np.ndarray, np.ndarray]:
 
     with open('resources/encoding_model_weights/lnp/2018_08_07_5_lnp_weights.p', 'rb') as pfile:
-        all_poisson_fits = pickle.load(pfile)
+        all_poisson_fits = renamed_load(pfile)
         reinflated_filters, reinflated_biases = reinflate_uncropped_poisson_model(
             all_poisson_fits,
             ct_order

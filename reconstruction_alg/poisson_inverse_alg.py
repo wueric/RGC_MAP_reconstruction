@@ -3,12 +3,11 @@ import torch.nn as nn
 
 import numpy as np
 
-from optim.optim_base import BatchParallelUnconstrainedProblem
-from optim.admm_optim import BatchParallel_HQS_Z_Problem, BatchParallel_HQS_X_Problem
+from convex_solver_base.optim_base import BatchParallelUnconstrainedProblem
+from convex_solver_base.unconstrained_optim import FistaSolverParams, batch_parallel_unconstrained_solve
 
-from optim.unconstrained_optim import FistaSolverParams, batch_parallel_unconstrained_solve
+from reconstruction_alg.hqs_alg import BatchParallel_HQS_Z_Problem, BatchParallel_HQS_X_Problem
 
-from simple_priors.gaussian_prior import ConvPatch1FGaussianPrior
 
 from typing import Tuple, List, Dict, Optional, Callable, Union
 
