@@ -79,10 +79,10 @@ def load_fitted_glm_families() \
         -> Dict[str, FittedGLMFamily]:
 
     glm_model_paths = {
-        'ON parasol' : 'resources/encoding_model_weights/2018_08_07_5_on_parasol_full_res_glm_v4.p',
-        'OFF parasol': 'resources/encoding_model_weights/2018_08_07_5_off_parasol_full_res_glm_v4.p',
-        'ON midget': 'resources/encoding_model_weights/2018_08_07_5_on_midget_full_res_glm_v4.p',
-        'OFF midget': 'resources/encoding_model_weights/2018_08_07_5_off_midget_full_res_glm_v4.p',
+        'ON parasol' : 'resources/encoding_model_weights/2018_08_07_5_on_parasol_glm_cpu_v4.p',
+        'OFF parasol': 'resources/encoding_model_weights/2018_08_07_5_off_parasol_glm_cpu_v4.p',
+        'ON midget': 'resources/encoding_model_weights/2018_08_07_5_on_midget_glm_cpu_v4.p',
+        'OFF midget': 'resources/encoding_model_weights/2018_08_07_5_off_midget_glm_cpu_v4.p',
     }
 
     output_dict = {}  # type: Dict[str, FittedGLMFamily]

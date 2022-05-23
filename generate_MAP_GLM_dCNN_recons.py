@@ -1,6 +1,5 @@
 import pickle
 from typing import Dict, List, Tuple, Union, Optional, Callable, Sequence, Any
-from dataclasses import dataclass
 import argparse
 
 import tqdm
@@ -12,8 +11,7 @@ from data_util.matched_cells_struct import OrderedMatchedCellsStruct
 from data_util.load_data import make_glm_stim_time_component, compute_stimulus_onset_spikes, \
     load_stacked_dataset, load_cell_ordering, load_fitted_glm_families
 
-from reconstruction_alg.glm_inverse_alg import PackedGLMTensors, \
-    convert_glm_family_to_np, make_full_res_packed_glm_tensors
+from reconstruction_alg.glm_inverse_alg import PackedGLMTensors, make_full_res_packed_glm_tensors
 
 from linear_models.linear_decoding_models import ClosedFormLinearModel
 import denoisers.denoiser_wrappers as denoiser_wrappers
@@ -27,10 +25,8 @@ from reconstruction_alg.glm_inverse_alg import FittedGLMFamily, batch_per_bin_be
 from hyperparameters.hyperparameters import glm_hqs_hyperparameters_2018_08_07_5, HQSHyperparameters, \
     make_hqs_schedule
 
-from collections import namedtuple
 
-
-def generate_onebatch_reconstruction(
+def generate_onebatch_glm_hqs_reconstruction(
         x_prob: BatchKnownSeparable_TrialGLM_ProxProblem,
         z_prob: BatchParallel_UnblindDenoiserPrior_HQS_ZProb,
         image_shape: Tuple[int, int],
@@ -83,7 +79,7 @@ def generate_onebatch_reconstruction(
     return denoise_hqs_reconstructed_image
 
 
-def batch_parallel_generate_open_loop_reconstructions(
+def batch_parallel_generate_glm_hqs_reconstructions(
         example_spikes: np.ndarray,
         packed_glm_tensors: PackedGLMTensors,
         glm_time_component: np.ndarray,
@@ -151,7 +147,7 @@ def batch_parallel_generate_open_loop_reconstructions(
         high = low + max_batch_size
         glm_trial_spikes_torch = example_spikes_torch[low:high, ...]
 
-        batch_reconstructions = generate_onebatch_reconstruction(
+        batch_reconstructions = generate_onebatch_glm_hqs_reconstruction(
             unblind_denoise_hqs_x_prob,
             unblind_denoise_hqs_z_prob,
             (height, width),
@@ -195,7 +191,7 @@ def batch_parallel_generate_open_loop_reconstructions(
 
     glm_trial_spikes_torch = example_spikes_torch[low:high, ...]
 
-    batch_reconstructions = generate_onebatch_reconstruction(
+    batch_reconstructions = generate_onebatch_glm_hqs_reconstruction(
         unblind_denoise_hqs_x_prob,
         unblind_denoise_hqs_z_prob,
         (height, width),
@@ -217,8 +213,7 @@ def batch_parallel_generate_open_loop_reconstructions(
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser("Mass-generate reconstructions for each method")
-    parser.add_argument('mode', type=str, help='must be one of [LNP, GLM]')
+    parser = argparse.ArgumentParser("Mass-generate reconstructions for MAP-GLM-dCNN method")
     parser.add_argument('output_path', type=str, help='save path for reconstructions')
     parser.add_argument('-b', '--batch', type=int, default=16, help='batch size for reconstruction')
     parser.add_argument('-n', '--noise_init', type=float, default=1e-3,
@@ -228,7 +223,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     encoding_model_str = args.mode
-    use_glm = (encoding_model_str == 'GLM')
 
     use_gpu= args.gpu
     if use_gpu:
@@ -236,7 +230,11 @@ if __name__ == '__main__':
     else:
         device = torch.device('cpu')
 
-    cells_ordered = load_cell_ordering()
+    linear_model_param = None
+    if args.linear_init:
+        linear_decoder = torch.load(args.linear_init, map_location=device)
+
+    cells_ordered = load_cell_ordering() # type: OrderedMatchedCellsStruct
     ct_order = cells_ordered.get_cell_types()
     cell_ids_as_ordered_list = []
     for ct in ct_order:
@@ -248,36 +246,29 @@ if __name__ == '__main__':
     glm_stim_time_component = make_glm_stim_time_component()
 
     # load the GLM model and hyperparameters
-    if use_glm:
-        fitted_glm_families = load_fitted_glm_families()
-        fitted_glm_families = {key: convert_glm_family_to_np(val, spat_shape=(height, width))
-                               for key, val in fitted_glm_families.items()}
-        packed_glm_tensors = make_full_res_packed_glm_tensors(
-            cells_ordered,
-            fitted_glm_families)
+    fitted_glm_families = load_fitted_glm_families()
+    packed_glm_tensors = make_full_res_packed_glm_tensors(
+        cells_ordered,
+        fitted_glm_families)
 
-        hyperparameters = glm_hqs_hyperparameters_2018_08_07_5()
+    hyperparameters = glm_hqs_hyperparameters_2018_08_07_5()
 
-        target_reconstructions = batch_parallel_generate_open_loop_reconstructions(
-            response_vector,
-            packed_glm_tensors,
-            glm_stim_time_component,
-            hyperparameters,
-            16,
-            device,
-            initialize_noise_level=args.noise_init,
-            initialize_linear_model=linear_model_param)
+    target_reconstructions = batch_parallel_generate_glm_hqs_reconstructions(
+        spikes_binned,
+        packed_glm_tensors,
+        glm_stim_time_component,
+        hyperparameters,
+        16,
+        device,
+        initialize_noise_level=args.noise_init,
+        initialize_linear_model=linear_model_param)
 
-        pass
-    # load the LNP model and hyperparameters
-    else:
-        pass
-
+    pass
 
     with open(args.save_path, 'wb') as pfile:
         save_data = {
-            'ground_truth': test_frames if not args.heldout else heldout_frames,
-            method_lookup: target_reconstructions
+            'ground_truth': ground_truth_images,
+            'glm_hqs': target_reconstructions
         }
 
         pickle.dump(save_data, pfile)
