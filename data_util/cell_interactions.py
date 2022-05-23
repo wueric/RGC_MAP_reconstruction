@@ -1,7 +1,7 @@
 import numpy as np
 
 from typing import Tuple, Union, List, Dict, Tuple, Any, Optional
-from load_data.matched_cells_struct import OrderedMatchedCellsStruct
+from data_util.matched_cells_struct import OrderedMatchedCellsStruct
 
 class CellInteraction:
 

@@ -222,8 +222,6 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', '--gpu', action='store_true', default=False, help='use GPU')
     args = parser.parse_args()
 
-    encoding_model_str = args.mode
-
     use_gpu= args.gpu
     if use_gpu:
         device = torch.device('cuda')

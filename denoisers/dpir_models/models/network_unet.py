@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import gaussian_denoiser.dpir_models.models.basicblock as B
+import denoisers.dpir_models.models.basicblock as B
 import numpy as np
 
 '''
