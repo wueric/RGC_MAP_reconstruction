@@ -9,7 +9,8 @@ import torch
 
 from data_util.matched_cells_struct import OrderedMatchedCellsStruct
 from data_util.load_data import compute_stimulus_onset_spikes, \
-    load_stacked_dataset, load_cell_ordering, load_fitted_lnps
+    load_stacked_dataset, load_cell_ordering
+from data_util.load_models import load_fitted_lnps
 
 from reconstruction_alg.poisson_inverse_alg import BatchPoissonProxProblem
 

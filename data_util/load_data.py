@@ -2,15 +2,11 @@ import h5py
 import numpy as np
 import torch
 
-from typing import Tuple, Dict, Union, List
+from typing import Tuple, Dict, Union
 import pickle
 
 from data_util.matched_cells_struct import OrderedMatchedCellsStruct
 from data_util.cell_interactions import InteractionGraph
-
-from encoding_models.poisson_encoder import reinflate_uncropped_poisson_model
-
-from reconstruction_alg.glm_inverse_alg import FittedGLMFamily
 
 
 class RenameUnpickler(pickle.Unpickler):
@@ -30,14 +26,23 @@ def renamed_load(file_obj):
     return RenameUnpickler(file_obj).load()
 
 
-def renamed_loads(pickled_bytes):
-    file_obj = io.BytesIO(pickled_bytes)
-    return renamed_load(file_obj)
-
-
 def load_typed_dataset() -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
 
     with h5py.File('resources/rawdata/typed_cells.hdf5', 'r') as h5_file:
+
+        stimuli = np.array(h5_file['stimuli'], dtype=np.float32)
+        binned_spikes_by_type = {
+            'ON parasol': np.array(h5_file['ON parasol'], dtype=np.float32),
+            'OFF parasol': np.array(h5_file['OFF parasol'], dtype=np.float32),
+            'ON midget': np.array(h5_file['ON midget'], dtype=np.float32),
+            'OFF midget': np.array(h5_file['OFF midget'], dtype=np.float32),
+        }
+
+    return stimuli, binned_spikes_by_type
+
+
+def load_typed_kim_dataset() -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
+    with h5py.File('resources/rawdata/kim_typed_cells.hdf5', 'r') as h5_file:
 
         stimuli = np.array(h5_file['stimuli'], dtype=np.float32)
         binned_spikes_by_type = {
@@ -58,6 +63,16 @@ def load_stacked_dataset() -> Tuple[np.ndarray, np.ndarray]:
         spikes = np.array(h5_file['all_spikes'], dtype=np.float32)
 
     return stimuli, spikes
+
+
+def load_stacked_kim_dataset() -> Tuple[np.ndarray, np.ndarray]:
+    with h5py.File('resources/rawdata/kim_all_cells_stacked.hdf5', 'r') as h5_file:
+
+        stimuli = np.array(h5_file['stimuli'], dtype=np.float32)
+        spikes = np.array(h5_file['all_spikes'], dtype=np.float32)
+
+    return stimuli, spikes
+
 
 
 def load_cell_ordering() -> OrderedMatchedCellsStruct:
@@ -97,33 +112,3 @@ def compute_stimulus_onset_spikes(glm_binned_spikes: Union[np.ndarray, torch.Ten
         return np.sum(glm_binned_spikes[:, :, onset_bin:offset_bin], axis=2)
     else:
         return torch.sum(glm_binned_spikes[:, :, onset_bin:offset_bin], dim=2)
-
-
-def load_fitted_glm_families() \
-        -> Dict[str, FittedGLMFamily]:
-
-    glm_model_paths = {
-        'ON parasol' : 'resources/encoding_model_weights/glm/2018_08_07_5_on_parasol_glm_cpu_v4.p',
-        'OFF parasol': 'resources/encoding_model_weights/glm/2018_08_07_5_off_parasol_glm_cpu_v4.p',
-        'ON midget': 'resources/encoding_model_weights/glm/2018_08_07_5_on_midget_glm_cpu_v4.p',
-        'OFF midget': 'resources/encoding_model_weights/glm/2018_08_07_5_off_midget_glm_cpu_v4.p',
-    }
-
-    output_dict = {}  # type: Dict[str, FittedGLMFamily]
-    for key, path in glm_model_paths.items():
-        with open(path, 'rb') as pfile:
-            output_dict[key] = renamed_load(pfile)
-
-    return output_dict
-
-
-def load_fitted_lnps(ct_order: List[str]) -> Tuple[np.ndarray, np.ndarray]:
-
-    with open('resources/encoding_model_weights/lnp/2018_08_07_5_lnp_weights.p', 'rb') as pfile:
-        all_poisson_fits = renamed_load(pfile)
-        reinflated_filters, reinflated_biases = reinflate_uncropped_poisson_model(
-            all_poisson_fits,
-            ct_order
-        )
-
-    return reinflated_filters, reinflated_biases
