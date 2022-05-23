@@ -7,7 +7,7 @@ import numpy as np
 
 from typing import Dict, List, Tuple, Callable, Union, Optional, Any
 
-from lib.data_utils.matched_cells_struct import OrderedMatchedCellsStruct
+from data_util.matched_cells_struct import OrderedMatchedCellsStruct
 from reconstruction_alg.hqs_alg import HQS_X_Problem, BatchParallel_HQS_X_Problem
 from convex_solver_base.optim_base import SingleUnconstrainedProblem, BatchParallelUnconstrainedProblem
 
@@ -276,67 +276,6 @@ def _build_padded_coupling_sel_and_filters(
     return padded_coupling_sel, padded_coupling_filters
 
 
-def convert_glm_family_to_np(glm_family: FittedGLMFamily,
-                             spat_shape: Optional[Tuple[int, int]] = None) -> FittedGLMFamily:
-    '''
-    Helper function; converts glm_family components to np.ndarray from torch.Tensor on GPU
-        if necessary (this is necessary due to a bug in the full res fitting code, and because
-        refitting GLMs is a multi-day affair)
-
-    Rebuilds the object no matter what, even if no conversions are necessary
-    :param glm_family:
-    :return:
-    '''
-
-    converted_params_dict = {}
-    for cell_id, fg in glm_family.fitted_models.items():
-        spat_w = fg.spatial_weights.detach().cpu().numpy() if isinstance(fg.spatial_weights,
-                                                                         torch.Tensor) else fg.spatial_weights
-        if spat_shape is not None:
-            spat_w = spat_w.reshape(spat_shape)
-
-        spat_b = fg.spatial_bias.detach().cpu().numpy() if isinstance(fg.spatial_bias,
-                                                                      torch.Tensor) else fg.spatial_bias
-
-        time_w = fg.timecourse_weights.detach().cpu().numpy() if isinstance(fg.timecourse_weights,
-                                                                            torch.Tensor) else fg.timecourse_weights
-
-        feedback_w = fg.feedback_weights.detach().cpu().numpy() if isinstance(fg.feedback_weights,
-                                                                              torch.Tensor) else fg.feedback_weights
-
-        coupling_w0 = fg.coupling_cells_weights[0].detach().cpu().numpy() if isinstance(fg.coupling_cells_weights[0],
-                                                                                        torch.Tensor) else \
-        fg.coupling_cells_weights[0]
-        coupling_w1 = fg.coupling_cells_weights[1].detach().cpu().numpy() if isinstance(fg.coupling_cells_weights[1],
-                                                                                        torch.Tensor) else \
-        fg.coupling_cells_weights[1]
-
-        converted_params_dict[cell_id] = FittedGLM(cell_id,
-                                                   spat_w, spat_b, time_w, feedback_w, (coupling_w0, coupling_w1),
-                                                   fg.fitting_params, fg.train_loss, fg.test_loss)
-
-    # spatial_basis may be an np.ndarray, None, or torch.Tensor
-    # convert to np.ndarray if torch.Tensor, otherwise pass through
-    spatial_basis = glm_family.spatial_basis.detach().cpu().numpy() if isinstance(glm_family.spatial_basis,
-                                                                                  torch.Tensor) else glm_family.spatial_basis
-    timecourse_basis = glm_family.timecourse_basis.detach().cpu().numpy() if isinstance(glm_family.timecourse_basis,
-                                                                                        torch.Tensor) else glm_family.timecourse_basis
-    feedback_basis = glm_family.feedback_basis.detach().cpu().numpy() if isinstance(glm_family.feedback_basis,
-                                                                                    torch.Tensor) else glm_family.feedback_basis
-    coupling_basis = glm_family.coupling_basis.detach().cpu().numpy() if isinstance(glm_family.coupling_basis,
-                                                                                    torch.Tensor) else glm_family.coupling_basis
-    
-    del glm_family
-    
-    return FittedGLMFamily(
-        converted_params_dict,
-        spatial_basis,
-        timecourse_basis,
-        feedback_basis,
-        coupling_basis
-    )
-
-
 def make_full_res_packed_glm_tensors(ordered_cells: OrderedMatchedCellsStruct,
                                       fit_glms: Dict[str, FittedGLMFamily]) \
         -> PackedGLMTensors:
@@ -354,7 +293,6 @@ def make_full_res_packed_glm_tensors(ordered_cells: OrderedMatchedCellsStruct,
     for cell_type in cell_type_ordering:
 
         glm_family = fit_glms[cell_type]
-        glm_family = convert_glm_family_to_np(glm_family)
 
         for idx, cell_id in enumerate(ordered_cells.get_reference_cell_order(cell_type)):
 
@@ -563,7 +501,7 @@ class TrialGLMSeparableFullSim(nn.Module):
     def compute_coupling_exp_arg(self,
                                  all_observed_spikes: torch.Tensor) -> torch.Tensor:
         '''
-        Computes the coupling component of the generator signal from the real data
+        Computes the coupling component of the generator signal from the real data_util
         
         Implementation: Gather using the specified indices, then a 1D conv
 
@@ -577,7 +515,7 @@ class TrialGLMSeparableFullSim(nn.Module):
         # we want an output set of spike trains with shape
         # (batch, n_cells, max_coupled_cells, n_bins_observed)
 
-        # we need to pick our data out of all_observed_spikes, which has shape
+        # we need to pick our data_util out of all_observed_spikes, which has shape
         # (batch, n_cells, n_bins_observed)
         # using indices contained in self.coupled_sel, which has shape
         # (n_cells, max_coupled_cells), which contains indices from 0 to (n_cells - 1)
@@ -779,7 +717,7 @@ class KnownSeparableTrialGLMLoss_Precompute(nn.Module):
     def compute_feedback_exp_arg(self,
                                  all_observed_spikes: torch.Tensor) -> torch.Tensor:
         '''
-        Computes the feedback component of the generator signal from the real data for every cell
+        Computes the feedback component of the generator signal from the real data_util for every cell
 
         Implementation: 1D conv with groups
         :param all_observed_spikes:  shape (n_cells, n_bins_observed), observed spike trains for
@@ -806,7 +744,7 @@ class KnownSeparableTrialGLMLoss_Precompute(nn.Module):
     def compute_coupling_exp_arg(self,
                                  all_observed_spikes: torch.Tensor) -> torch.Tensor:
         '''
-        Computes the coupling component of the generator signal from the real data for every cell
+        Computes the coupling component of the generator signal from the real data_util for every cell
 
         Implementation: Gather using the specified indices, then a 1D conv
 
@@ -820,7 +758,7 @@ class KnownSeparableTrialGLMLoss_Precompute(nn.Module):
         # we want an output set of spike trains with shape
         # (n_cells, max_coupled_cells, n_bins_observed)
 
-        # we need to pick our data out of all_observed_spikes, which has shape
+        # we need to pick our data_util out of all_observed_spikes, which has shape
         # (n_cells, n_bins_observed)
         # using indices contained in self.coupled_sel, which has shape
         # (n_cells, max_coupled_cells), which contains indices from 0 to (n_cells - 1)
@@ -1172,7 +1110,7 @@ class BatchKnownSeparableTrialGLMLoss_Precompute(nn.Module):
         # we want an output set of spike trains with shape
         # (batch, n_cells, max_coupled_cells, n_bins_observed)
 
-        # we need to pick our data out of all_observed_spikes, which has shape
+        # we need to pick our data_util out of all_observed_spikes, which has shape
         # (batch, n_cells, n_bins_observed)
         # using indices contained in self.coupled_sel, which has shape
         # (n_cells, max_coupled_cells), which contains indices from 0 to (n_cells - 1)
@@ -1398,8 +1336,11 @@ class BatchKnownSeparable_TrialGLM_ProxProblem(BatchParallelUnconstrainedProblem
 
         nn.init.normal_(self.image, mean=0.0, std=0.5)
 
-    def get_reconstructed_image(self) -> np.ndarray:
+    def get_reconstructed_image_np(self) -> np.ndarray:
         return self.image.detach().cpu().numpy()
+
+    def get_reconstructed_image(self) -> torch.Tensor:
+        return self.image.detach()
 
     @property
     def n_problems(self) -> int:
@@ -1443,9 +1384,6 @@ class BatchKnownSeparable_TrialGLM_ProxProblem(BatchParallelUnconstrainedProblem
 
     def compute_A_x(self, *args, **kwargs) -> torch.Tensor:
         return args[self.IMAGE_IDX_ARGS]
-
-    def get_output_image(self) -> torch.Tensor:
-        return self.reconstructed_images.detach().clone()
 
     def encoding_multi_image_gradient(self,
                                       batched_multi_images: torch.Tensor,
@@ -1818,7 +1756,7 @@ class KnownSeparableTrialGLMLoss(nn.Module):
     def compute_feedback_exp_arg(self,
                                  all_observed_spikes: torch.Tensor) -> torch.Tensor:
         '''
-        Computes the feedback component of the generator signal from the real data for every cell
+        Computes the feedback component of the generator signal from the real data_util for every cell
         
         Implementation: 1D conv with groups
         :param all_observed_spikes:  shape (n_cells, n_bins_observed), observed spike trains for 
@@ -1844,7 +1782,7 @@ class KnownSeparableTrialGLMLoss(nn.Module):
     def compute_coupling_exp_arg(self,
                                  all_observed_spikes: torch.Tensor) -> torch.Tensor:
         '''
-        Computes the coupling component of the generator signal from the real data for every cell 
+        Computes the coupling component of the generator signal from the real data_util for every cell
 
         Implementation: Gather using the specified indices, then a 1D conv
 
@@ -1858,7 +1796,7 @@ class KnownSeparableTrialGLMLoss(nn.Module):
         # we want an output set of spike trains with shape
         # (n_cells, max_coupled_cells, n_bins_observed)
 
-        # we need to pick our data out of all_observed_spikes, which has shape
+        # we need to pick our data_util out of all_observed_spikes, which has shape
         # (n_cells, n_bins_observed)
         # using indices contained in self.coupled_sel, which has shape
         # (n_cells, max_coupled_cells), which contains indices from 0 to (n_cells - 1)
@@ -2288,124 +2226,3 @@ class TrialGLMLoss(nn.Module):
         gradient_imshape = gradient_image_flat.reshape(-1, self.height, self.width)
 
         return -gradient_imshape
-
-
-def trial_glm_nn_movie_style_prior_sampling(
-        denoiser_callable: Callable[[torch.Tensor], torch.Tensor],
-        glm_model_params: PackedGLMTensors,
-        encoding_spikes: np.ndarray,
-        prior_to_reconstructed_image: np.ndarray,
-        spiking_loss_function: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
-        device: torch.device,
-        sig_0: float = 1.0,
-        sig_L: float = 0.01,
-        h0: float = 0.01,
-        beta: float = 0.01,
-        prior_term_weight: float = 1.0,
-        max_iter: int = 1000) -> np.ndarray:
-    '''
-    Implementation note: This function owns the WIP reconstructed image, and does not
-        use the image_flattened attribute of glm_model
-
-    Implementation note: Since we are reconstructing a series of images all at the same time,
-        we need to have the option of partial updates in case some of the images converge
-        faster than other images
-
-    :param denoiser_callable:
-    :param glm_model:
-    :param encoding_spikes: np.ndarray, shape (n_cells, n_bins_observed)
-        Note that this is unpadded, i.e. it does not have the null cell included.
-        This function is supposed to take care of the padding
-
-    :param prior_to_reconstructed_image: np.ndarray, shape (n_bins_filter, height, width)
-    :param device:
-    :param sig_0:
-    :param sig_L:
-    :param h0:
-    :param beta:
-    :param prior_term_weight:
-    :param max_iter:
-    :return:
-    '''
-
-    n_bins_filter, height, width = prior_to_reconstructed_image.shape
-    n_pixels = height * width
-    root_pixels = np.sqrt(n_pixels)
-
-    n_cells, n_bins_observed = encoding_spikes.shape
-
-    n_bins_reconstruct = n_bins_observed - n_bins_filter
-
-    y_iter_reconstruct = torch.randn(n_bins_reconstruct, height, width,
-                                     dtype=torch.float32, device=device) * sig_0
-
-    encoding_spikes_tensor = torch.tensor(encoding_spikes, dtype=torch.float32, device=device)
-
-    trial_glm_model = TrialGLMLoss(
-        glm_model_params.spatial_filters,
-        glm_model_params.timecourse_filters,
-        glm_model_params.feedback_filters,
-        glm_model_params.coupling_filters,
-        glm_model_params.coupling_indices,
-        glm_model_params.bias,
-        n_bins_reconstruct,
-        prior_to_reconstructed_image.reshape(n_bins_filter, -1),
-        spiking_loss_function,
-        dtype=torch.float32).to(device)  # type: TrialGLMLoss
-
-    t = 1
-    sig_t = torch.ones((n_bins_reconstruct,), dtype=torch.float32, device=device) * sig_0
-    not_yet_converged = torch.ones((n_bins_reconstruct,), dtype=torch.bool, device=device)
-    while torch.any(not_yet_converged):
-        print(f't={t}, sig_t={torch.max(sig_t).item()}\r', end='')
-        h_t = h0 * t / (1 + h0 * (t - 1))
-
-        # shape (n_bins_reconstruct, height, width)
-        residual_imshape = denoiser_callable(y_iter_reconstruct)
-
-        encoding_weight = sig_t * sig_t / prior_term_weight
-
-        # shape (n_bins_reconstruct, height, width)
-        glm_loss_gradient = encoding_weight[:, None, None] * \
-                            trial_glm_model.image_gradient(y_iter_reconstruct, encoding_spikes_tensor)
-
-        # shape (n_bins_reconstruct, height, width)
-        d_t = residual_imshape + glm_loss_gradient
-
-        # shape (n_bins_reconstruct, )
-        sig_t = torch.linalg.norm(residual_imshape, dim=(1, 2)) / root_pixels
-
-        # shape (n_bins_reconstruct, )
-        gamma_t = np.sqrt((1 - beta * h_t) ** 2 - (1 - h_t) ** 2) * sig_t
-
-        z_t = torch.randn_like(y_iter_reconstruct)
-
-        # make sure we only update the not-yet-converged problems
-        # logic: if sig_t drops below sig_L even once, we mark that problem
-        # as converged forever
-        step_all = h_t * d_t + gamma_t[:, None, None] * z_t
-        step_update = not_yet_converged.float()[:, None, None] * step_all
-        y_iter_reconstruct = y_iter_reconstruct + step_update
-
-        not_yet_converged = not_yet_converged | (sig_t <= sig_L)
-
-        if t > max_iter:
-            break
-
-        t += 1
-
-    residual_imshape = denoiser_callable(y_iter_reconstruct)
-    final_image_retina_range = (y_iter_reconstruct + residual_imshape).detach().cpu().numpy()
-    # final_image_retina_range = (y_iter_reconstruct).detach().cpu().numpy()
-
-    return final_image_retina_range
-
-
-class Gaussian1FPriorReconstruction(SingleUnconstrainedProblem,
-                                    KnownSeparableTrialGLMLoss_Precompute):
-
-    def __init__(self,
-                 stacked):
-        pass
-
-    pass

@@ -14,7 +14,7 @@ def load_zhang_drunet_unblind_denoiser(device: torch.device) -> nn.Module:
     :return:
     '''
     N_CHANNELS = 1
-    MODEL_PATH = 'denoisers/dpir_models/drunet_gray.pth'
+    MODEL_PATH = 'resources/denoiser_weights/drunet_gray.pth'
 
     model = UNetRes(in_nc=N_CHANNELS + 1, out_nc=N_CHANNELS, nc=[64, 128, 256, 512], nb=4, act_mode='R',
                     downsample_mode="strideconv", upsample_mode="convtranspose")

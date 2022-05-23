@@ -3,13 +3,16 @@ import torch
 import torch.nn as nn
 
 from convex_solver_base.optim_base import SingleDirectSolveProblem, BatchParallelDirectSolveProblem, \
-    SingleProblem, BatchParallelProblem
+    SingleProblem, BatchParallelProblem, SingleUnconstrainedProblem, BatchParallelUnconstrainedProblem
 from convex_solver_base.direct_optim import batch_parallel_direct_solve, single_direct_solve
+from convex_solver_base.unconstrained_optim import single_unconstrained_solve, FistaSolverParams, \
+    batch_parallel_unconstrained_solve
 
 from abc import ABCMeta, abstractmethod
-from typing import Callable, Union, Tuple, Iterator, Optional, List
+from typing import Callable, Union, Tuple, Iterator, Optional, List, Any
 
-HQS_ParameterizedSolveFn = Callable[[Union[SingleProblem, BatchParallelProblem], bool], Union[float, torch.Tensor]]
+HQS_ParameterizedSolveFn = Callable[[Union[SingleProblem, BatchParallelProblem], Optional[bool], Any],
+                                    Union[float, torch.Tensor]]
 
 
 class HQS_X_Problem(metaclass=ABCMeta):
@@ -40,6 +43,76 @@ class BatchParallel_HQS_X_Problem(metaclass=ABCMeta):
 
     def set_rho(self, new_rho: float) -> None:
         self.rho = new_rho
+
+
+class HQS_XGenerator:
+    def __init__(self,
+                 first_niter: int = 1000,
+                 subsequent_niter: int = 500):
+
+        self.iter_count = 0
+        self.first_n_iter = first_niter
+        self.subsequent_niter = subsequent_niter
+
+    def __iter__(self):
+        return self
+
+    def __next__(self) -> HQS_ParameterizedSolveFn:
+        if self.iter_count == 0:
+            self.iter_count += 1
+
+            def applied_fista_solve(prob: SingleUnconstrainedProblem,
+                                    verbose: bool = False,
+                                    **kwargs) -> float:
+                return single_unconstrained_solve(prob, FistaSolverParams(max_iter=self.first_n_iter),
+                                                  verbose=verbose, **kwargs)
+
+            return applied_fista_solve
+        else:
+            self.iter_count += 1
+
+            def applied_fista_solve(prob: SingleUnconstrainedProblem,
+                                    verbose: bool = False,
+                                    **kwargs) -> float:
+                return single_unconstrained_solve(prob, FistaSolverParams(max_iter=self.subsequent_niter),
+                                                  verbose=verbose, **kwargs)
+
+            return applied_fista_solve
+
+
+class BatchParallel_HQS_XGenerator:
+    def __init__(self,
+                 first_niter: int = 1000,
+                 subsequent_niter: int = 500):
+
+        self.iter_count = 0
+        self.first_n_iter = first_niter
+        self.subsequent_niter = subsequent_niter
+
+    def __iter__(self):
+        return self
+
+    def __next__(self) -> HQS_ParameterizedSolveFn:
+        if self.iter_count == 0:
+            self.iter_count += 1
+
+            def applied_fista_solve(prob: BatchParallelUnconstrainedProblem,
+                                    verbose: bool = False,
+                                    **kwargs) -> torch.Tensor:
+                return batch_parallel_unconstrained_solve(prob, FistaSolverParams(max_iter=self.first_n_iter),
+                                                          verbose=verbose, **kwargs)
+
+            return applied_fista_solve
+        else:
+            self.iter_count += 1
+
+            def applied_fista_solve(prob: BatchParallelUnconstrainedProblem,
+                                    verbose: bool = False,
+                                    **kwargs) -> torch.Tensor:
+                return batch_parallel_unconstrained_solve(prob, FistaSolverParams(max_iter=self.subsequent_niter),
+                                                          verbose=verbose, **kwargs)
+
+            return applied_fista_solve
 
 
 class HQS_Z_Problem(metaclass=ABCMeta):
@@ -217,17 +290,17 @@ class BatchParallel_UnblindDenoiserPrior_HQS_ZProb(BatchParallelDirectSolveProbl
         nn.init.uniform_(self.z_image, a=-0.1, b=0.1)
 
 
-def scheduled_rho_lambda_single_hqs_solve(x_problem: Union[SingleProblem, HQS_X_Problem],
-                                          x_solver_it: Iterator[HQS_ParameterizedSolveFn],
-                                          z_problem: Union[SingleProblem, HQS_Z_Problem],
-                                          z_solver_it: Iterator[HQS_ParameterizedSolveFn],
-                                          rho_schedule: Iterator[float],
-                                          lambda_schedule: Iterator[float],
-                                          max_iter_hqs: int,
-                                          verbose: bool = False,
-                                          save_intermediates: bool = False,
-                                          z_initialization_point: Optional[torch.Tensor] = None,
-                                          **kwargs) \
+def scheduled_rho_fixed_lambda_single_hqs_solve(x_problem: Union[HQS_X_Problem, BatchParallel_HQS_X_Problem],
+                                                x_solver_it: Iterator[HQS_ParameterizedSolveFn],
+                                                z_problem: Union[HQS_Z_Problem, BatchParallel_HQS_Z_Problem],
+                                                z_solver_it: Iterator[HQS_ParameterizedSolveFn],
+                                                rho_schedule: Iterator[float],
+                                                fixed_prior_weight: float,
+                                                max_iter_hqs: int,
+                                                verbose: bool = False,
+                                                save_intermediates: bool = False,
+                                                z_initialization_point: Optional[torch.Tensor] = None,
+                                                **kwargs) \
         -> Optional[List[Tuple[np.ndarray, np.ndarray]]]:
     intermediates_list = None
     if save_intermediates:
@@ -236,12 +309,11 @@ def scheduled_rho_lambda_single_hqs_solve(x_problem: Union[SingleProblem, HQS_X_
     if z_initialization_point is not None:
         x_problem.assign_z(z_initialization_point)
 
-    for it, x_solve_fn, z_solve_fn, rho_val, prior_lambda_val in zip(range(max_iter_hqs), x_solver_it, z_solver_it,
-                                                                     rho_schedule, lambda_schedule):
+    for it, x_solve_fn, z_solve_fn, rho_val in zip(range(max_iter_hqs), x_solver_it, z_solver_it, rho_schedule):
 
         x_problem.set_rho(rho_val)
         z_problem.set_rho(rho_val)
-        z_problem.set_prior_lambda(prior_lambda_val)
+        z_problem.set_prior_lambda(fixed_prior_weight)
 
         loss_x_prob = x_solve_fn(x_problem, verbose=verbose, **kwargs)
 
