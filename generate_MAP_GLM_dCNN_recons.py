@@ -251,6 +251,7 @@ if __name__ == '__main__':
 
     hyperparameters = glm_hqs_hyperparameters_2018_08_07_5()
 
+    print("Generating MAP-GLM-dCNN reconstructions")
     target_reconstructions = batch_parallel_generate_glm_hqs_reconstructions(
         spikes_binned,
         packed_glm_tensors,
@@ -263,7 +264,7 @@ if __name__ == '__main__':
 
     pass
 
-    with open(args.save_path, 'wb') as pfile:
+    with open(args.output_path, 'wb') as pfile:
         save_data = {
             'ground_truth': ground_truth_images,
             'glm_hqs': target_reconstructions

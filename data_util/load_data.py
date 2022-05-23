@@ -11,6 +11,26 @@ from data_util.cell_interactions import InteractionGraph
 from reconstruction_alg.glm_inverse_alg import FittedGLMFamily
 
 
+class RenameUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        renamed_module = module
+        if module == "lib.data_utils.matched_cells_struct":
+            renamed_module = "data_util.matched_cells_struct"
+        elif name == 'FittedGLMFamily' or name == 'FittedGLM' and module == "optimization_encoder.trial_glm":
+            renamed_module="reconstruction_alg.glm_inverse_alg"
+
+        return super(RenameUnpickler, self).find_class(renamed_module, name)
+
+
+def renamed_load(file_obj):
+    return RenameUnpickler(file_obj).load()
+
+
+def renamed_loads(pickled_bytes):
+    file_obj = io.BytesIO(pickled_bytes)
+    return renamed_load(file_obj)
+
+
 def load_typed_dataset() -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
 
     with h5py.File('resources/rawdata/typed_cells.hdf5', 'r') as h5_file:
@@ -39,7 +59,7 @@ def load_stacked_dataset() -> Tuple[np.ndarray, np.ndarray]:
 def load_cell_ordering() -> OrderedMatchedCellsStruct:
 
     with open('resources/rgcdata/2018_08_07_5_responses_ordered.p', 'rb') as ordered_cells_file:
-        cells_ordered = pickle.load(ordered_cells_file)
+        cells_ordered = renamed_load(ordered_cells_file)
     return cells_ordered
 
 
@@ -79,15 +99,15 @@ def load_fitted_glm_families() \
         -> Dict[str, FittedGLMFamily]:
 
     glm_model_paths = {
-        'ON parasol' : 'resources/encoding_model_weights/2018_08_07_5_on_parasol_glm_cpu_v4.p',
-        'OFF parasol': 'resources/encoding_model_weights/2018_08_07_5_off_parasol_glm_cpu_v4.p',
-        'ON midget': 'resources/encoding_model_weights/2018_08_07_5_on_midget_glm_cpu_v4.p',
-        'OFF midget': 'resources/encoding_model_weights/2018_08_07_5_off_midget_glm_cpu_v4.p',
+        'ON parasol' : 'resources/encoding_model_weights/glm/2018_08_07_5_on_parasol_glm_cpu_v4.p',
+        'OFF parasol': 'resources/encoding_model_weights/glm/2018_08_07_5_off_parasol_glm_cpu_v4.p',
+        'ON midget': 'resources/encoding_model_weights/glm/2018_08_07_5_on_midget_glm_cpu_v4.p',
+        'OFF midget': 'resources/encoding_model_weights/glm/2018_08_07_5_off_midget_glm_cpu_v4.p',
     }
 
     output_dict = {}  # type: Dict[str, FittedGLMFamily]
     for key, path in glm_model_paths.items():
         with open(path, 'rb') as pfile:
-            output_dict[key] = pickle.load(pfile)
+            output_dict[key] = renamed_load(pfile)
 
     return output_dict
