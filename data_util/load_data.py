@@ -2,11 +2,13 @@ import h5py
 import numpy as np
 import torch
 
-from typing import Tuple, Dict, Union
+from typing import Tuple, Dict, Union, List
 import pickle
 
 from data_util.matched_cells_struct import OrderedMatchedCellsStruct
 from data_util.cell_interactions import InteractionGraph
+
+from encoding_models.poisson_encoder import reinflate_uncropped_poisson_model
 
 from reconstruction_alg.glm_inverse_alg import FittedGLMFamily
 
@@ -111,3 +113,15 @@ def load_fitted_glm_families() \
             output_dict[key] = renamed_load(pfile)
 
     return output_dict
+
+
+def load_fitted_lnps(ct_order: List[str]) -> Tuple[np.ndarray, np.ndarray]:
+
+    with open('resources/encoding_model_weights/lnp/2018_08_07_5_lnp_weights.p', 'rb') as pfile:
+        all_poisson_fits = pickle.load(pfile)
+        reinflated_filters, reinflated_biases = reinflate_uncropped_poisson_model(
+            all_poisson_fits,
+            ct_order
+        )
+
+    return reinflated_filters, reinflated_biases

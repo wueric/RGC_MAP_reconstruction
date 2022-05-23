@@ -137,10 +137,10 @@ class BatchPoissonProxProblem(BatchParallelUnconstrainedProblem, BatchParallel_H
     def assign_z(self, prox_to: torch.Tensor) -> None:
         self.z_const_tensor.data[:] = prox_to.data[:]
 
-    def get_reconstructed_image_torch(self) -> torch.Tensor:
+    def get_reconstructed_image(self) -> torch.Tensor:
         return self.reconstructed_images.detach().clone()
 
-    def get_reconstructed_image(self) -> np.ndarray:
+    def get_reconstructed_image_np(self) -> np.ndarray:
         return self.reconstructed_images.detach().cpu().numpy()
 
     def _eval_smooth_loss(self, *args, **kwargs) -> torch.Tensor:
