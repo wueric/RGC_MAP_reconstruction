@@ -117,10 +117,19 @@ def load_kim_deblur_network(device: torch.device) -> ResnetGenerator:
     return deblur_network
 
 
+class LinearDecoderRenameUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        renamed_module = module
+        if module == 'linear_decoding_models.linear_decoding_models':
+            renamed_module = 'linear_models.linear_decoding_models'
+        return super(LinearDecoderRenameUnpickler, self).find_class(renamed_module, name)
+
+
 def load_linear_reconstruction_model(device: torch.device) -> ClosedFormLinearModel:
 
     linear_decoder = torch.load('resources/LCAE_weights/linear_filters.pt',
-                                map_location=device)
+                                map_location=device,
+                                pickle_module=LinearDecoderRenameUnpickler)
     linear_decoder.eval()
     return linear_decoder
 
