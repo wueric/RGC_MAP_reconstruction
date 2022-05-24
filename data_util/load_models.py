@@ -125,11 +125,18 @@ class LinearDecoderRenameUnpickler(pickle.Unpickler):
         return super(LinearDecoderRenameUnpickler, self).find_class(renamed_module, name)
 
 
-def load_linear_reconstruction_model(device: torch.device) -> ClosedFormLinearModel:
+def load_linear_reconstruction_model(n_cells: int,
+                                     imshape: Tuple[int, int],
+                                     device: torch.device) -> ClosedFormLinearModel:
 
-    linear_decoder = torch.load('resources/LCAE_weights/linear_filters.pt',
-                                map_location=device,
-                                pickle_module=LinearDecoderRenameUnpickler)
+    linear_decoder= ClosedFormLinearModel(n_cells,
+                                          imshape[0],
+                                          imshape[1])
+
+
+    linear_decoder_state_dict = torch.load('resources/LCAE_weights/linear_filters.pt',
+                                map_location=device)
+    linear_decoder.load_state_dict(linear_decoder_state_dict)
     linear_decoder.eval()
     return linear_decoder
 

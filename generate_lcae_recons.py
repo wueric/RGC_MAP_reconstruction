@@ -73,7 +73,10 @@ if __name__ == '__main__':
     ground_truth_images, spikes_binned = load_stacked_dataset()
     onset_spikes_only = compute_stimulus_onset_spikes(spikes_binned)
 
-    linear_decoder = load_linear_reconstruction_model(device)
+    _, height, width = ground_truth_images.shape
+    n_cells = onset_spikes_only.shape[1]
+
+    linear_decoder = load_linear_reconstruction_model(n_cells, (height, width), device)
     lcae_encoder, lcae_decoder = load_lcae_encoder_and_decoder(device)
 
     ######## Generate the autoencoder reconstructions ########################
