@@ -10,7 +10,7 @@ import torch
 from data_util.matched_cells_struct import OrderedMatchedCellsStruct
 from data_util.load_data import compute_stimulus_onset_spikes, \
     load_stacked_dataset, load_cell_ordering
-from data_util.load_models import load_fitted_lnps
+from data_util.load_models import load_fitted_lnps, load_linear_reconstruction_model
 
 from reconstruction_alg.poisson_inverse_alg import BatchPoissonProxProblem
 
@@ -213,10 +213,6 @@ if __name__ == '__main__':
     else:
         device = torch.device('cpu')
 
-    linear_model_param = None
-    if args.linear_init:
-        linear_decoder = torch.load(args.linear_init, map_location=device)
-
     cells_ordered = load_cell_ordering()  # type: OrderedMatchedCellsStruct
     ct_order = cells_ordered.get_cell_types()
     cell_ids_as_ordered_list = []
@@ -233,6 +229,13 @@ if __name__ == '__main__':
 
     hyperparameters = lnp_hqs_hyperparameters_2018_08_07_5()
 
+    linear_model_param = None
+    if args.linear_init:
+        linear_model_param = load_linear_reconstruction_model(
+            spikes_binned.shape[1],
+            (ground_truth_images.shape[1], ground_truth_images.shape[2]),
+            device)
+
     print("Generating MAP-LNP-dCNN reconstructions")
     target_reconstructions = batch_parallel_generate_lnp_hqs_reconstructions(
         lnp_spikes_binned,
@@ -242,8 +245,6 @@ if __name__ == '__main__':
         device,
         initialize_noise_level=args.noise_init,
         initialize_linear_model=linear_model_param)
-
-    pass
 
     with open(args.output_path, 'wb') as pfile:
         save_data = {

@@ -142,8 +142,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser("Mass-generate reconstructions for MAP-GLM-dCNN method")
     parser.add_argument('output_path', type=str, help='save path for reconstructions')
-    parser.add_argument('-b', '--batch', type=int, default=16, help='batch size for reconstruction')
-    parser.add_argument('-l', '--linear_init', action='store_true', default=False, help='use linear initialization')
+    parser.add_argument('-b', '--batch', type=int, default=4, help='batch size for reconstruction')
     parser.add_argument('-gpu', '--gpu', action='store_true', default=False, help='use GPU')
     args = parser.parse_args()
 
@@ -183,7 +182,7 @@ if __name__ == '__main__':
         glm_stim_time_component,
         gaussian_zca_mat_imshape,
         hyperparameters.prior_weight,
-        4,
+        args.batch,
         device)
 
     with open(args.output_path, 'wb') as pfile:

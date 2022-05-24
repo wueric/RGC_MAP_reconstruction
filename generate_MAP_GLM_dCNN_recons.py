@@ -10,7 +10,7 @@ import torch
 from data_util.matched_cells_struct import OrderedMatchedCellsStruct
 from data_util.load_data import make_glm_stim_time_component, compute_stimulus_onset_spikes, \
     load_stacked_dataset, load_cell_ordering
-from data_util.load_models import load_fitted_glm_families
+from data_util.load_models import load_fitted_glm_families, load_linear_reconstruction_model
 
 from reconstruction_alg.glm_inverse_alg import PackedGLMTensors, make_full_res_packed_glm_tensors
 
@@ -36,7 +36,6 @@ def generate_onebatch_glm_hqs_reconstruction(
         initialize_noise_level: float = 1e-3,
         initialize_linear_model: Optional[ClosedFormLinearModel] = None) \
         -> torch.Tensor:
-
     height, width = image_shape
 
     #################################################################################
@@ -223,14 +222,10 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', '--gpu', action='store_true', default=False, help='use GPU')
     args = parser.parse_args()
 
-    use_gpu= args.gpu
+    use_gpu = args.gpu
     device = torch.device('cuda') if use_gpu else torch.device('cpu')
 
-    linear_model_param = None
-    if args.linear_init:
-        linear_decoder = torch.load(args.linear_init, map_location=device)
-
-    cells_ordered = load_cell_ordering() # type: OrderedMatchedCellsStruct
+    cells_ordered = load_cell_ordering()  # type: OrderedMatchedCellsStruct
     ct_order = cells_ordered.get_cell_types()
     cell_ids_as_ordered_list = []
     for ct in ct_order:
@@ -248,6 +243,13 @@ if __name__ == '__main__':
         fitted_glm_families)
 
     hyperparameters = glm_hqs_hyperparameters_2018_08_07_5()
+
+    linear_model_param = None
+    if args.linear_init:
+        linear_model_param = load_linear_reconstruction_model(
+            spikes_binned.shape[1],
+            (ground_truth_images.shape[1], ground_truth_images.shape[2]),
+            device)
 
     print("Generating MAP-GLM-dCNN reconstructions")
     target_reconstructions = batch_parallel_generate_glm_hqs_reconstructions(
