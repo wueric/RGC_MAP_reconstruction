@@ -86,7 +86,7 @@ if __name__ == '__main__':
         device
     )
 
-    with open(args.image_save_path, 'wb') as pfile:
+    with open(args.output_path, 'wb') as pfile:
         save_data = {
             'ground_truth': ground_truth_images,
             'kim_post_deblur': kim_examples,
