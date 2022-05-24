@@ -18,6 +18,8 @@ class RenameUnpickler(pickle.Unpickler):
             renamed_module="reconstruction_alg.glm_inverse_alg"
         elif name == 'ScaledPoissonFittedParams' and module == 'optimization_encoder.poisson_encoder':
             renamed_module='encoding_models.poisson_encoder'
+        elif module == "lib.data_utils.interaction_graph" or module == "lib.data_utils.interaction_hashable":
+            renamed_module = "data_util.cell_interactions"
 
         return super(RenameUnpickler, self).find_class(renamed_module, name)
 
@@ -69,13 +71,18 @@ def get_fit_cell_binned_spikes_glm(spikes_dict: Dict[str, np.ndarray],
 
 def get_coupled_cells_binned_spikes_glm(spikes_dict: Dict[str, np.ndarray],
                                         coupled_cells_ordered_by_type: Dict[str, List[int]],
-                                        cell_ordering: OrderedMatchedCellsStruct) -> Dict[str, np.ndarray]:
+                                        cell_ordering: OrderedMatchedCellsStruct,
+                                        return_stacked_array: bool = True) -> Union[Dict[str, np.ndarray], np.ndarray]:
 
     binned_spikes_by_type = {} # type: Dict[str, np.ndarray]
     for cell_type, coupled_cell_ids in coupled_cells_ordered_by_type.items():
         relevant_indices = cell_ordering.get_idx_for_same_type_cell_id_list(cell_type, coupled_cell_ids)
 
         binned_spikes_by_type[cell_type] = spikes_dict[cell_type][:, relevant_indices, :]
+
+    if return_stacked_array:
+        ct_order = cell_ordering.get_cell_types()
+        return np.concatenate([binned_spikes_by_type[ct] for ct in ct_order], axis=1)
 
     return binned_spikes_by_type
 
@@ -124,7 +131,7 @@ def load_cell_ordering() -> OrderedMatchedCellsStruct:
 def load_cell_interaction_graph() -> InteractionGraph:
 
     with open('resources/rgcdata/2018_08_07_5_interactions.p', 'rb') as picklefile:
-        pairwise_interactions = pickle.load(picklefile)
+        pairwise_interactions = renamed_load(picklefile)
     return pairwise_interactions
 
 

@@ -168,9 +168,8 @@ if __name__ == '__main__':
         # shape (n_pixels, )
         prior_filter_flat_torch = torch.tensor(prior_cropped.reshape(-1, ), dtype=torch.float32, device=device)
 
-        # shape (n_train_trials, 1, n_bins)
         # -> (n_train_trials, n_bins)
-        fit_cell_spikes_train_torch = torch.tensor(fit_cell_binned_train.squeeze(1), dtype=torch.float32, device=device)
+        fit_cell_spikes_train_torch = torch.tensor(fit_cell_binned_train, dtype=torch.float32, device=device)
 
         # shape (n_train_trials, n_coupled_cells, n_bins)
         coupled_spikes_train_torch = torch.tensor(coupled_binned_spikes_train, dtype=torch.float32, device=device)
