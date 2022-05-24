@@ -21,13 +21,11 @@ def generate_autoencoder_images(linear_reconstructor,
                                 device: torch.device,
                                 batch_size: int = 32) -> Tuple[np.ndarray, np.ndarray]:
     n_tot_images, height, width = ground_truth_images.shape
-    print(n_tot_images)
 
     generated_image_buffer = np.zeros((n_tot_images, height, width), dtype=np.float32)
     generated_linear_image_buffer = np.zeros((n_tot_images, height, width), dtype=np.float32)
     for low in range(0, n_tot_images, batch_size):
         high = min(low + batch_size, n_tot_images)
-        print(low, high)
 
         with torch.no_grad():
             # shape (batch, n_cells)
@@ -55,7 +53,7 @@ if __name__ == '__main__':
         'Generate reconstructions for L-CAE method')
     parser.add_argument('output_path', type=str, help='save path for reconstructions')
     parser.add_argument('-b', '--batch', type=int, default=16, help='batch size for reconstruction')
-    parser.add_argument('-gpu', '--gpu', action='store_true', default=False, help='use GPU')
+    parser.add_argument('-gpu', '--gpu', action='store_true', help='use GPU')
     args = parser.parse_args()
 
     use_gpu = args.gpu
@@ -90,7 +88,7 @@ if __name__ == '__main__':
         batch_size=args.batch
     )
 
-    with open(args.image_save_path, 'wb') as pfile:
+    with open(args.output_path, 'wb') as pfile:
         save_data = {
             'ground_truth': ground_truth_images,
             'autoencoder': autoencoder_reconstructed_images,

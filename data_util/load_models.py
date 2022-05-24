@@ -131,7 +131,7 @@ def load_linear_reconstruction_model(n_cells: int,
 
     linear_decoder= ClosedFormLinearModel(n_cells,
                                           imshape[0],
-                                          imshape[1])
+                                          imshape[1]).to(device)
 
 
     linear_decoder_state_dict = torch.load('resources/LCAE_weights/linear_filters.pt',

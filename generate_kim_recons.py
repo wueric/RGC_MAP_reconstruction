@@ -84,7 +84,7 @@ if __name__ == '__main__':
         ground_truth_images,
         spikes_binned,
         device,
-        batch_size=args.batch_
+        batch_size=args.batch
     )
 
     with open(args.output_path, 'wb') as pfile:
