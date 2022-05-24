@@ -2,7 +2,7 @@ import h5py
 import numpy as np
 import torch
 
-from typing import Tuple, Dict, Union
+from typing import Tuple, Dict, Union, List
 import pickle
 
 from data_util.matched_cells_struct import OrderedMatchedCellsStruct
@@ -39,6 +39,45 @@ def load_typed_dataset() -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
         }
 
     return stimuli, binned_spikes_by_type
+
+
+def get_fit_cell_binned_spikes_lnp(spikes_dict: Dict[str, np.ndarray],
+                                   cell_type: str,
+                                   relevant_id_list: List[int],
+                                   cell_ordering: OrderedMatchedCellsStruct) -> np.ndarray:
+
+    relevant_idx = cell_ordering.get_idx_for_same_type_cell_id_list(cell_type, relevant_id_list)
+    return spikes_dict[cell_type][:, relevant_idx]
+
+
+def get_fit_cell_binned_spikes_glm(spikes_dict: Dict[str, np.ndarray],
+                                   cell_type: str,
+                                   cell_id: int,
+                                   cell_ordering: OrderedMatchedCellsStruct) -> np.ndarray:
+    '''
+
+    :param spikes_dict:
+    :param cell_type:
+    :param cell_id:
+    :param cell_ordering:
+    :return: shape (n_trials, n_bins)
+    '''
+
+    relevant_idx = cell_ordering.get_idx_for_same_type_cell_id_list(cell_type, [cell_id])[0]
+    return spikes_dict[cell_type][:, relevant_idx, :]
+
+
+def get_coupled_cells_binned_spikes_glm(spikes_dict: Dict[str, np.ndarray],
+                                        coupled_cells_ordered_by_type: Dict[str, List[int]],
+                                        cell_ordering: OrderedMatchedCellsStruct) -> Dict[str, np.ndarray]:
+
+    binned_spikes_by_type = {} # type: Dict[str, np.ndarray]
+    for cell_type, coupled_cell_ids in coupled_cells_ordered_by_type.items():
+        relevant_indices = cell_ordering.get_idx_for_same_type_cell_id_list(cell_type, coupled_cell_ids)
+
+        binned_spikes_by_type[cell_type] = spikes_dict[cell_type][:, relevant_indices, :]
+
+    return binned_spikes_by_type
 
 
 def load_typed_kim_dataset() -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
@@ -112,3 +151,13 @@ def compute_stimulus_onset_spikes(glm_binned_spikes: Union[np.ndarray, torch.Ten
         return np.sum(glm_binned_spikes[:, :, onset_bin:offset_bin], axis=2)
     else:
         return torch.sum(glm_binned_spikes[:, :, onset_bin:offset_bin], dim=2)
+
+
+def load_timecourse_1ms_by_type() -> Dict[str, np.ndarray]:
+    with open('resources/rgcdata/2018_08_07_5_timecourse.p', 'rb') as pfile:
+        return pickle.load(pfile)
+
+
+def load_cropped_stas_by_type() -> Dict[str, np.ndarray]:
+    with open('resources/rgcdata/2018_08_07_5_cropped_rfs.p', 'rb') as pfile:
+        return pickle.load(pfile)

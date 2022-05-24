@@ -224,10 +224,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     use_gpu= args.gpu
-    if use_gpu:
-        device = torch.device('cuda')
-    else:
-        device = torch.device('cpu')
+    device = torch.device('cuda') if use_gpu else torch.device('cpu')
 
     linear_model_param = None
     if args.linear_init:

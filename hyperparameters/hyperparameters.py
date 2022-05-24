@@ -25,3 +25,14 @@ def make_hqs_schedule(hyperparams: HQSHyperparameters) -> np.ndarray:
     rho_schedule = np.logspace(np.log10(hyperparams.rho_start), np.log10(hyperparams.rho_end), hyperparams.max_iter)
     return rho_schedule
 
+
+@dataclass
+class ExactMAPHyperparameters:
+
+    prior_weight: float
+    patch_height: int
+    patch_width: int
+
+
+def glm_1F_exact_MAP_hyperparameters_2018_08_07_5() -> ExactMAPHyperparameters:
+    return ExactMAPHyperparameters(prior_weight=0.15811388300841894, patch_height=64, patch_width=64)
