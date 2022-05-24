@@ -3,6 +3,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 import torch
 
+from autoencoder.autoencoder import Neurips2017_Encoder, Neurips2017_Decoder
 from data_util.load_data import renamed_load
 from encoding_models.poisson_encoder import reinflate_uncropped_poisson_model
 from kim_networks.nn_deblur import ResnetGenerator
@@ -114,3 +115,27 @@ def load_kim_deblur_network(device: torch.device) -> ResnetGenerator:
     deblur_network.load_state_dict(saved_deblur_network['deblur'])
     deblur_network = deblur_network.eval()
     return deblur_network
+
+
+def load_linear_reconstruction_model(device: torch.device) -> ClosedFormLinearModel:
+
+    linear_decoder = torch.load('resources/LCAE_weights/linear_filters.pt',
+                                map_location=device)
+    linear_decoder.eval()
+    return linear_decoder
+
+
+def load_lcae_encoder_and_decoder(device: torch.device) \
+        -> Tuple[Neurips2017_Encoder, Neurips2017_Decoder]:
+
+    encoder = Neurips2017_Encoder(0.25).to(device)
+    decoder = Neurips2017_Decoder(0.25).to(device)
+
+    saved_autoencoder = torch.load('resources/LCAE_weights/autoencoder.pt', map_location=device)
+    encoder.load_state_dict(saved_autoencoder['encoder'])
+    decoder.load_state_dict(saved_autoencoder['decoder'])
+
+    encoder.eval()
+    decoder.eval()
+
+    return encoder, decoder

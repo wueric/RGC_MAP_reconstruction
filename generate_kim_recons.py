@@ -83,7 +83,8 @@ if __name__ == '__main__':
         deblur_network,
         ground_truth_images,
         spikes_binned,
-        device
+        device,
+        batch_size=args.batch_
     )
 
     with open(args.output_path, 'wb') as pfile:
