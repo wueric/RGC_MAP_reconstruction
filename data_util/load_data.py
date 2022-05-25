@@ -173,3 +173,9 @@ def load_cropped_stas_by_type() -> Dict[str, np.ndarray]:
 def load_image_pix_mask() -> np.ndarray:
     with open('resources/rgcdata/image_pix_mask.p', 'rb') as pfile:
         return pickle.load(pfile)
+
+
+def load_rf_gaussian_fits():
+    with open('resources/rgcdata/2018_08_07_5_rf_gaussian_fits.p', 'rb') as pfile:
+        return pickle.load(pfile)
+
