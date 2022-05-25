@@ -168,3 +168,8 @@ def load_timecourse_1ms_by_type() -> Dict[str, np.ndarray]:
 def load_cropped_stas_by_type() -> Dict[str, np.ndarray]:
     with open('resources/rgcdata/2018_08_07_5_cropped_rfs.p', 'rb') as pfile:
         return pickle.load(pfile)
+
+
+def load_image_pix_mask() -> np.ndarray:
+    with open('resources/rgcdata/image_pix_mask.p', 'rb') as pfile:
+        return pickle.load(pfile)
