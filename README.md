@@ -3,7 +3,7 @@
 ## Dependencies
 
 1. requires Python >= 3.8
-2. numpy, scipy, matplotlib, pytorch, h5py, tqdm
+2. numpy, scipy, matplotlib, pytorch, h5py, tqdm, shapely
 3. To run the provided notebook, a working Jupyter installation is needed as well
 
 An NVIDIA GPU is strongly suggested to run the sample code.
