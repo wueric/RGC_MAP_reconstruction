@@ -5,6 +5,7 @@ import torch
 
 from autoencoder.autoencoder import Neurips2017_Encoder, Neurips2017_Decoder
 from data_util.load_data import renamed_load
+from data_util.matched_cells_struct import OrderedMatchedCellsStruct
 from encoding_models.poisson_encoder import reinflate_uncropped_poisson_model
 from kim_networks.nn_deblur import ResnetGenerator
 from kim_networks.ns_decoder import Parallel_NN_Decoder
@@ -30,6 +31,46 @@ def load_fitted_glm_families() \
             output_dict[key] = renamed_load(pfile)
 
     return output_dict
+
+
+def extract_glm_parameters_for_cell(cell_type: str,
+                                    cell_id: int,
+                                    all_glm_fits: Dict[str, FittedGLMFamily]):
+
+    relevant_glm_family = all_glm_fits[cell_type]
+
+    glm_weights = relevant_glm_family.fitted_models[cell_id]
+
+    spatial_filter = glm_weights.spatial_weights
+    spatial_bias = glm_weights.spatial_bias
+
+    timecourse_weights = glm_weights.timecourse_weights
+    feedback_weights = glm_weights.feedback_weights
+    coupling_weights, coupling_indices = glm_weights.coupling_cells_weights
+
+    timecourse_basis = relevant_glm_family.timecourse_basis
+    feedback_basis = relevant_glm_family.feedback_basis
+    coupling_basis = relevant_glm_family.coupling_basis
+
+    timecourse_filter = timecourse_weights @ timecourse_basis
+    feedback_filter = feedback_weights @ feedback_basis
+    coupling_filter = coupling_weights @ coupling_basis
+
+    return spatial_filter, spatial_bias, timecourse_filter, feedback_filter, coupling_filter, coupling_indices
+
+
+def separate_coupling_filters_by_type_and_id(coupling_filters: np.ndarray,
+                                             coupling_indices: np.ndarray,
+                                             cells_ordered: OrderedMatchedCellsStruct) \
+        -> Dict[str, Dict[int, np.ndarray]]:
+
+    return_dict = {}
+    for ix, corresponding_id in enumerate(coupling_indices):
+        corresponding_type = cells_ordered.get_cell_type_for_cell_id(corresponding_id)
+        if corresponding_type not in return_dict:
+            return_dict[corresponding_type] = {}
+        return_dict[corresponding_type][corresponding_id] = coupling_filters[ix, ...]
+    return return_dict
 
 
 def load_fitted_lnps(ct_order: List[str]) -> Tuple[np.ndarray, np.ndarray]:
