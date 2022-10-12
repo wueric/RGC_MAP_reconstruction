@@ -19,6 +19,9 @@ model fitting scripts are solely for demonstration purposes only, and should not
 The toy datasets as well as fitted model parameters for all of the encoding models and neural networks are provided 
 on Zenodo.
 
+Dataset and fitted models:
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6582341.svg)](https://doi.org/10.5281/zenodo.6582341)
+
 A Jupyter notebook (reconstructions.ipynb) explaining the dataset and illustrating how to run the code is also provided.
 
 ## Getting the dataset and models
